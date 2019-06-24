@@ -14,6 +14,11 @@ using nlohmann::json;
 using std::string;
 using std::vector;
 
+//start in lane 1
+int lane = 1;
+//have a reference velocity to target
+double ref_vel = 0.0; //mph
+
 int main() {
   uWS::Hub h;
 
@@ -105,11 +110,7 @@ int main() {
            *   sequentially every .02 seconds
            */
 
-          //start in lane 1
-          int lane = 1;
 
-          //have a reference velocity to target
-          double ref_vel = 49.5; //mph
           int prev_size = previous_path_x.size();
 
           if(prev_size > 0){
@@ -133,12 +134,19 @@ int main() {
                   if((check_car_s > car_s) && ((check_car_s - car_s) < 30)){
                     //do some logic here. lower reference velocity, so we dont crash into the car infront of us
                     //also flag to try to change lanes.
-                    ref_vel = 29.5; //mph
-                    //too_close = true;
+                    // ref_vel = 29.5; //mph
+                    too_close = true;
 
                   }
               }
 
+          }
+          
+          if(too_close){
+              ref_vel -= .224;
+          }
+          else if(ref_vel < 49.5){
+              ref_vel += .224;
           }
 
 
