@@ -97,6 +97,14 @@ int main() {
 
           // Sensor Fusion Data, a list of all other cars on the same side 
           //   of the road.
+          /* [car's unique ID,                           0
+             car's x position in map coordinates,        1
+             car's y position in map coordinates,        2
+             car's x velocity in m/s,                    3
+             car's y velocity in m/s,                    4
+             car's s position in frenet coordinates,     5
+             car's d position in frenet coordinates.]    6
+          */
           auto sensor_fusion = j[1]["sensor_fusion"];
           
           json msgJson;
@@ -118,39 +126,58 @@ int main() {
           }
           
           bool too_close = false;
-
+          bool free_right = false;
+          bool free_left = false;
           //find ref_v to use
           for (int i = 0; i < sensor_fusion.size(); i++){
               //car is in my lane
               float d = sensor_fusion[i][6];
-              if(d < (2 + 4*lane + 2) && d > (2 + 4*lane - 2)){
-                  double vx = sensor_fusion[i][3];
-                  double vy = sensor_fusion[i][4];
-                  double check_speed = sqrt(vx*vx + vy*vy);
-                  double check_car_s = sensor_fusion[i][5];
 
-                  check_car_s += (double)prev_size*.02*check_speed; //if using previous points can project s value outwards
+              double vx = sensor_fusion[i][3];
+              double vy = sensor_fusion[i][4];
+              double check_speed = sqrt(vx*vx + vy*vy);
+              double check_car_s = sensor_fusion[i][5];
+
+              check_car_s += (double)prev_size*.02*check_speed; //if using previous points can project s value outwards
+
+              if(d < (2 + 4*lane + 2) && d > (2 + 4*lane - 2)){
                   //check s values greater than mine and s gap
                   if((check_car_s > car_s) && ((check_car_s - car_s) < 30)){
                     //do some logic here. lower reference velocity, so we dont crash into the car infront of us
                     //also flag to try to change lanes.
                     // ref_vel = 29.5; //mph
-                    too_close = true;
-                    if(lane > 0){
-                        lane = 0;
-                    }
-                    
+                    too_close = true;                    
                   }
               }
-
+              if(d < (2 + 4*(lane - 1) + 2) && d > (2 + 4*(lane - 1) - 2) && lane > 0){
+                  //check s values greater than mine and s gap
+                  if((check_car_s > car_s) && ((check_car_s - car_s) < 30)){
+                    //we dont crash into the car left-front of us
+                    free_left = true;                    
+                  }
+              }
+              if(d < (2 + 4*(lane + 1) + 2) && d > (2 + 4*(lane + 1) - 2) && lane < 2){
+                  //check s values greater than mine and s gap
+                  if((check_car_s > car_s) && ((check_car_s - car_s) < 30)){
+                    //we dont crash into the car right-front of us
+                    free_right = true;                    
+                  }
+              }
           }
           
           if(too_close){
               ref_vel -= .224;
+              if(!free_left && lane > 0){ //if there is no car left and there is a left lane.
+                  lane--;
+              }
+              else if(!free_right && lane < 2){ //if there is no car right and there is a right lane.
+                  lane++;
+              }
           }
           else if(ref_vel < 49.5){
               ref_vel += .224;
           }
+          //std::cout << "too_close:" << too_close << " free_left:" << free_left << " free_right:" << free_right << " lane:" << lane << std::endl;
 
 
           //create a list of widely spaced (x,y) waypoints, evenly spaced at 30m
