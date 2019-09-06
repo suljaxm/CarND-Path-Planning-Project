@@ -93,6 +93,7 @@ The highway's waypoints loop around so the frenet s value, distance along the ro
 
 
 **OUTPUT**: values provided by the c++ program to the simulator
+
 The car's  path-planning  in map coordinates
 
 ["next_x"] 
